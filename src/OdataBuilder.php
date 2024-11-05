@@ -7,9 +7,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Traits\ForwardsCalls;
+use Tots\Odata\Concerns\AllowedFilter;
+use Tots\Odata\Concerns\AllowedSort;
 
 class OdataBuilder {
 
+    use AllowedFilter;
+    use AllowedSort;
     use ForwardsCalls;
 
     protected Request $request;
