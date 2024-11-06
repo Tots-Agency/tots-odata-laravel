@@ -33,13 +33,13 @@ class ODataParser
             return [];
         }
         // Remove $filter from path
-        $filterString = str_replace($filterKey, '', $pathUrl);
+        $filterString = str_replace($filterKey . '=', '', $pathUrl);
         // Separate filters by and
         $filters = explode(' and ', $filterString);
 
         return collect($filters)->map(function ($filter) {
             return $this->parseAnd($filter);
-        });
+        })->toArray();
     }
 
     public function parseAnd(string $filter): array
@@ -52,12 +52,19 @@ class ODataParser
         if ($customOperator) {
             return $this->parseFunctionOperator($filter);
         }
+
+        return $this->parseCompareOperator($filter);
     }
 
     public function parseCompareOperator(string $filter): array
     {
         // Separate filter by space
         $data = explode(' ', $filter);
+
+        // Detect if value is in quotes
+        if (strpos($data[2], "'") === 0) {
+            $data[2] = substr($data[2], 1, -1);
+        }
 
         return [
             'key' => $data[0],
@@ -76,9 +83,9 @@ class ODataParser
         $dataTwo = explode(' ', $data[1]);
 
         return [
-            'key' => $dataTwo[0],
+            'key' => substr($dataTwo[0], 0, -1),
             'operator' => $this->getOperatorSQL($operator),
-            'value' => $dataTwo[1]
+            'value' => substr($dataTwo[1], 1, -2)
         ];
     }
 
