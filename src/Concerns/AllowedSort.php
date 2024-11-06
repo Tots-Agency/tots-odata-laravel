@@ -36,7 +36,7 @@ trait AllowedSort
                 return;
             }
 
-            $query->orderBy($sort, $direction);
+            $query->orderBy($key, $direction);
         });
     }
 }
