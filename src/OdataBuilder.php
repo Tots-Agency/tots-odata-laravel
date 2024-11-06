@@ -10,7 +10,7 @@ use Illuminate\Support\Traits\ForwardsCalls;
 use Tots\Odata\Concerns\AllowedFilter;
 use Tots\Odata\Concerns\AllowedSort;
 
-class OdataBuilder {
+class ODataBuilder {
 
     use AllowedFilter;
     use AllowedSort;
@@ -27,6 +27,9 @@ class OdataBuilder {
 
     public function run()
     {
+        $this->applySorts($this->query, $this->request);
+        $this->applyFilters($this->query, $this->request);
+
         return $this->query->paginate($this->getTop(), ['*'], 'page', $this->getCurrentPage());
     }
 
