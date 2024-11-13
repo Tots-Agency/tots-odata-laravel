@@ -7,11 +7,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Traits\ForwardsCalls;
+use Tots\Odata\Concerns\AllowedExpand;
 use Tots\Odata\Concerns\AllowedFilter;
 use Tots\Odata\Concerns\AllowedSort;
 
-class ODataBuilder {
-
+class ODataBuilder
+{
+    use AllowedExpand;
     use AllowedFilter;
     use AllowedSort;
     use ForwardsCalls;
@@ -27,6 +29,7 @@ class ODataBuilder {
 
     public function run()
     {
+        $this->applyExpands($this->query, $this->request);
         $this->applySorts($this->query, $this->request);
         $this->applyFilters($this->query, $this->request);
 
