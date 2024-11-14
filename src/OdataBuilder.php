@@ -10,21 +10,26 @@ use Illuminate\Support\Traits\ForwardsCalls;
 use Tots\Odata\Concerns\AllowedExpand;
 use Tots\Odata\Concerns\AllowedFilter;
 use Tots\Odata\Concerns\AllowedSort;
+use Tots\Odata\Parsers\ModelParser;
 
 class ODataBuilder
 {
     use AllowedExpand;
     use AllowedFilter;
     use AllowedSort;
+    use ModelParser;
     use ForwardsCalls;
 
     protected Request $request;
     protected EloquentBuilder $query;
 
-    public function __construct(protected EloquentBuilder|Relation $subject, ?Request $request = null)
+    protected string $table;
+
+    public function __construct(protected EloquentBuilder|Relation $subject, ?Request $request = null, ?string $table = null)
     {
         $this->query = $subject;
         $this->request = $request;
+        $this->table = $table;
     }
 
     public function run()
@@ -33,7 +38,13 @@ class ODataBuilder
         $this->applySorts($this->query, $this->request);
         $this->applyFilters($this->query, $this->request);
 
-        return $this->query->paginate($this->getTop(), ['*'], 'page', $this->getCurrentPage());
+        echo $this->query->toSql(); exit();
+
+        $result = $this->query->paginate($this->getTop(), ['*'], 'page', $this->getCurrentPage());
+
+        $this->applyExpandPerformanceResources($this->request, $result);
+
+        return $result;
     }
 
     public function __call($name, $arguments)
@@ -69,9 +80,10 @@ class ODataBuilder
     public static function for(EloquentBuilder|Relation|string $subject, ?Request $request = null): static
     {
         if (is_subclass_of($subject, Model::class)) {
+            $table = (new $subject)->getTable();
             $subject = $subject::query();
         }
 
-        return new static($subject, $request);
+        return new static($subject, $request, $table ?? null);
     }
 }
