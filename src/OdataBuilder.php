@@ -38,8 +38,6 @@ class ODataBuilder
         $this->applySorts($this->query, $this->request);
         $this->applyFilters($this->query, $this->request);
 
-        echo $this->query->toSql(); exit();
-
         $result = $this->query->paginate($this->getTop(), ['*'], 'page', $this->getCurrentPage());
 
         $this->applyExpandPerformanceResources($this->request, $result);
