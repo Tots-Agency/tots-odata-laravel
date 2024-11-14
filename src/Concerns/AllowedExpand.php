@@ -62,7 +62,7 @@ trait AllowedExpand
         });
     }
 
-    public function applyExpandPerformanceResources(?Request $request = null, \Illuminate\Contracts\Pagination\LengthAwarePaginator $result)
+    public function applyExpandPerformanceResources(?Request $request, \Illuminate\Contracts\Pagination\LengthAwarePaginator $result)
     {
         $this->getExpandsByRequest($request)->each(function ($with) use ($result) {
             if (!$this->allowedExpands->contains($with)) {
