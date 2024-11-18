@@ -83,10 +83,26 @@ class ODataParser
         $dataTwo = explode(' ', $data[1]);
 
         return [
-            'key' => substr($dataTwo[0], 0, -1),
+            'key' => substr($dataTwo[1], 0, -1),
             'operator' => $this->getOperatorSQL($operator),
-            'value' => substr($dataTwo[1], 1, -2)
+            'value' => $this->getValueSQL($operator, substr($dataTwo[0], 1, -2))
         ];
+    }
+
+    public function getValueSQL(string $operator, $value)
+    {
+        switch ($operator) {
+            case 'contains':
+                return '%' . $value . '%';
+            case 'startswith':
+                return $value . '%';
+            case 'endswith':
+                return '%' . $value;
+            case 'substringof':
+                return '%' . $value . '%';
+            default:
+                return $value;
+        }
     }
 
     public function getOperatorSQL(string $operator): string
