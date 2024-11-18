@@ -33,10 +33,16 @@ trait AllowedFilter
         $filters = ODataParser::onlyFilters($filters);
 
         collect($filters)->each(function ($filter) use ($query) {
-            $data = explode(' ', $filter);
-            $key = $data[0];
-            $operator = $data[1];
-            $value = $data[2];
+            if (is_array($filter)) {
+                $key = $filter['key'];
+                $operator = $filter['operator'];
+                $value = $filter['value'];
+            } else {
+                $data = explode(' ', $filter);
+                $key = $data[0];
+                $operator = $data[1];
+                $value = $data[2];
+            }
 
             if (!$this->allowedFilters->contains($key)) {
                 return;
