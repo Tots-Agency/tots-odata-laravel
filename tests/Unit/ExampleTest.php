@@ -11,13 +11,13 @@ class ExampleTest extends TestCase
      */
     public function test_can_parser(): void
     {
-        $testFilters = '$filter=contains(name, \'John\') and startswith(name, \'Doe\')';
+        $testFilters = '$filter=contains(name, \'John\') and startswith(name, \'Doe\') and category in (\'Electronics\', \'Books\', \'Clothing\')';
         $testFilterTwo = '$filter=name eq \'John\' and age gt 20';
 
         $parser = new \Tots\Odata\ODataParser();
         $filtersOne = $parser->parseFilters($testFilters);
         $filtersTwo = $parser->parseFilters($testFilterTwo);
-
+        
         $this->assertIsArray($filtersOne);
         $this->assertIsArray($filtersTwo);
     }

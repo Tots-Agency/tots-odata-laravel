@@ -41,6 +41,14 @@ trait AllowedFilter
                 return;
             }
 
+            if($operator == 'IN'){
+                $query->whereIn($key, $value);
+                return;
+            }else if ($operator == 'NOTIN'){
+                $query->whereNotIn($key, $value);
+                return;
+            }
+
             $query->where($key, $operator, $value);
         });
     }

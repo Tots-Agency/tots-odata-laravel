@@ -24,6 +24,10 @@ class ODataParser
         'contains', 'startswith', 'endswith', 'substringof'
     ];
 
+    protected $listOperators = [
+        'in', 'notin'
+    ];
+
     public function parseFilters(string $pathUrl, bool $withDollar = true): array
     {
         // $filter is Odata protocol for filtering
@@ -53,6 +57,15 @@ class ODataParser
             return $this->parseFunctionOperator($filter);
         }
 
+        // Verify if listComparator
+        $listOperator = collect($this->listOperators)->filter(function ($operator) use ($filter) {
+            return strpos($filter, $operator) !== false;
+        })->first();
+        
+        if ($listOperator) {
+            return $this->parseListOperator($filter);
+        }
+
         return $this->parseCompareOperator($filter);
     }
 
@@ -70,6 +83,22 @@ class ODataParser
             'key' => $data[0],
             'operator' => $this->getOperatorSQL($data[1]),
             'value' => $data[2]
+        ];
+    }
+
+    public function parseListOperator(string $filter): array
+    {
+        // Separate filter by space
+        $data = explode(' ', $filter, 3);
+
+        $values = explode(', ', str_replace(['(', ')'], '', $data[2]));
+
+        return [
+            'key' => $data[0],
+            'operator' => $this->getOperatorSQL($data[1]),
+            'value' => collect($values)->map(function ($value) {
+                return str_replace("'", '', $value);
+            })->toArray()
         ];
     }
 
@@ -128,6 +157,10 @@ class ODataParser
                 return 'LIKE';
             case 'substringof':
                 return 'LIKE';
+            case 'in':
+                return 'IN';
+            case 'notin':
+                return 'NOT IN';
             default:
                 return '=';
         }
