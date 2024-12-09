@@ -109,12 +109,12 @@ class ODataParser
         // Get the key
         $operator = $data[0];
         // Separate remaining data by )
-        $dataTwo = explode(' ', $data[1]);
+        $dataTwo = explode(', \'', $data[1]);
 
         return [
-            'key' => substr($dataTwo[1], 0, -1),
+            'key' => $dataTwo[0],
             'operator' => $this->getOperatorSQL($operator),
-            'value' => $this->getValueSQL($operator, substr($dataTwo[0], 1, -2))
+            'value' => $this->getValueSQL($operator, substr($dataTwo[1], 0, -2))
         ];
     }
 
