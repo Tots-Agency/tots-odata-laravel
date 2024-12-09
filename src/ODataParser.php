@@ -91,7 +91,7 @@ class ODataParser
         // Separate filter by space
         $data = explode(' ', $filter, 3);
 
-        $values = explode(', ', str_replace(['(', ')'], '', $data[2]));
+        $values = explode(', ', str_replace(['(', ')'], ['', ''], $data[2]));
 
         return [
             'key' => $data[0],

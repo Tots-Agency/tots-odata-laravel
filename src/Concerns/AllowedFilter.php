@@ -2,6 +2,7 @@
 
 namespace Tots\Odata\Concerns;
 
+use Closure;
 use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Http\Request;
@@ -10,12 +11,23 @@ use Tots\Odata\ODataParser;
 trait AllowedFilter
 {
     protected Collection $allowedFilters;
+    protected ?Collection $customFilters = null;
 
     public function allowedFilters($filters): static
     {
         $filters = is_array($filters) ? $filters : func_get_args();
 
         $this->allowedFilters = collect($filters);
+
+        return $this;
+    }
+
+    public function addCustomFilter($relationKey, Closure $callback): static
+    {
+        if($this->customFilters == null) {
+            $this->customFilters = collect();
+        }
+        $this->customFilters->put($relationKey, $callback);
 
         return $this;
     }
@@ -38,6 +50,12 @@ trait AllowedFilter
             $value = $filter['value'];
 
             if (!$this->allowedFilters->contains($key)) {
+                return;
+            }
+
+            if($this->customFilters != null && $this->customFilters->has($key) && (is_array($value) && count($value) > 0)) {
+                $callback = $this->customFilters->get($key);
+                $callback($query, $operator, $value);
                 return;
             }
 
