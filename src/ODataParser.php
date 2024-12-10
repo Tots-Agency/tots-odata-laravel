@@ -2,168 +2,166 @@
 
 namespace Tots\Odata;
 
+use Tots\Odata\Filters\ODataFilter;
+use Tots\Odata\Filters\ODataGroup;
+use Tots\Odata\Filters\ODataType;
+
 class ODataParser
 {
-    /*protected $objectOperators = [
-        'and', 'or', 'between', 'notBetween', 'in', 'notIn', 'any', 'overlap', 'contains', 'contained'
-    ];
-
-    protected $valueOperators = [
-        'gt', 'gte', 'lt', 'lte', 'ne', 'eq', 'not', 'like', 'notLike', 'iLike', 'notILike', 'regexp', 'notRegexp', 'iRegexp', 'notIRegexp', 'col'
-    ];
-
-    protected $customOperators = [
-        'ge', 'le', 'substringof', 'startswith', 'endswith', 'tolower', 'toupper', 'trim', 'year', 'month', 'day', 'hour', 'minute', 'second'
-    ];*/
-
-    protected $compareOperators = [
-        'eq', 'ne', 'gt', 'ge', 'lt', 'le'
-    ];
-
-    protected $functionOperators = [
-        'contains', 'startswith', 'endswith', 'substringof'
-    ];
-
-    protected $listOperators = [
-        'in', 'notin'
-    ];
+    protected $compareOperators = ['eq', 'ne', 'gt', 'ge', 'lt', 'le'];
+    protected $functionOperators = ['contains', 'startswith', 'endswith', 'substringof'];
+    protected $listOperators = ['in', 'notin'];
 
     public function parseFilters(string $pathUrl, bool $withDollar = true): array
     {
-        // $filter is Odata protocol for filtering
         $filterKey = $withDollar ? '$filter' : 'filter';
-        // Verify if starts with $filter
-        if(strpos($pathUrl, $filterKey) != 0 || $pathUrl == ''){
+        if (strpos($pathUrl, $filterKey) !== 0 || $pathUrl == '') {
             return [];
         }
-        // Remove $filter from path
         $filterString = str_replace($filterKey . '=', '', $pathUrl);
-        // Separate filters by and
-        $filters = explode(' and ', $filterString);
-
-        return collect($filters)->map(function ($filter) {
-            return $this->parseAnd($filter);
-        })->toArray();
+        $tokens = $this->tokenize($filterString);
+        return $this->parseTokens($tokens);
     }
 
-    public function parseAnd(string $filter): array
+    protected function tokenize(string $expression): array
+    {
+        $pattern = '/(contains|startswith|endswith|substringof)\((.*?)\)/';
+        $replacement = '$1$$$2$$';
+        $modifiedExpression = preg_replace($pattern, $replacement, $expression);
+
+        $pattern = '/(\(|\)| and | or )/';
+        $tokens = preg_split($pattern, $modifiedExpression, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+        $tokens = array_map(function($token) {
+            return str_replace(['contains$$', 'startswith$$', 'endswith$$', 'substringof$$', '$$'], ["contains(", 'startswith(', 'endswith(', 'substringof(', ')'], $token);
+        }, $tokens);
+        return array_map('trim', $tokens);
+    }
+
+    protected function parseTokens(array $tokens): array
+    {
+        $filters = [];
+        $beforeFilter = null;
+        $beforeLogicalOperator = null;
+        $lastGroup = null;
+        
+        foreach ($tokens as $token) {
+            $newFilter = $this->parseToken($token, $beforeFilter, $beforeLogicalOperator, $lastGroup);
+            if($newFilter != null){
+                $filters[] = $newFilter;
+            }
+        }
+
+        return $filters;
+    }
+
+    protected function parseToken(string $token, &$beforeFilter, &$beforeLogicalOperator, &$lastGroup): ?ODataType
+    {
+        if($beforeFilter == null && $this->isLogicalOperator($token)) {
+            throw new \Exception('Invalid filter format');
+        } else if ($this->isLogicalOperator($token)) {
+            $beforeLogicalOperator = $token;
+        } else if ($token == '(') {
+            $lastGroup = new ODataGroup($beforeLogicalOperator);
+            $beforeLogicalOperator = null;
+            return $lastGroup;
+        } else if ($token == ')') {
+            $beforeFilter = $lastGroup;
+            $lastGroup = null;
+        } else {
+            $newFilter = $this->parseFilter($token, $beforeLogicalOperator ?? 'and');
+            if($lastGroup != null){
+                $lastGroup->addFilter($newFilter);
+            } else {
+                $beforeFilter = $newFilter;
+                return $newFilter;
+            }
+        }
+
+        return null;
+    }
+
+    protected function parseFilter(string $filter, string $logicalOperator): ODataFilter
     {
         // Verificar si alguno de los custom operators esta en el filtro
-        $customOperator = collect($this->functionOperators)->filter(function ($operator) use ($filter) {
+        $functionOperator = collect($this->functionOperators)->filter(function ($operator) use ($filter) {
             return strpos($filter, $operator) !== false;
         })->first();
 
-        if ($customOperator) {
-            return $this->parseFunctionOperator($filter);
+        if ($functionOperator) {
+            return $this->createFunctionFilter($filter, $logicalOperator);
         }
 
         // Verify if listComparator
         $listOperator = collect($this->listOperators)->filter(function ($operator) use ($filter) {
             return strpos($filter, $operator) !== false;
         })->first();
-        
+
         if ($listOperator) {
-            return $this->parseListOperator($filter);
+            return $this->createListFilter($filter, $logicalOperator);
         }
 
-        return $this->parseCompareOperator($filter);
+        return $this->createCompareFilter($filter, $logicalOperator);
     }
 
-    public function parseCompareOperator(string $filter): array
+    protected function createFunctionFilter(string $filter, string $logicalOperator): ODataFilter
     {
-        // Separate filter by space
-        $data = explode(' ', $filter);
+        $data = explode('(', $filter);
+        $operator = $data[0];
+        $dataTwo = explode(',', trim($data[1], ')'));
 
-        // Detect if value is in quotes
-        if (strpos($data[2], "'") === 0) {
-            $data[2] = substr($data[2], 1, -1);
-        }
+        $filter = new ODataFilter($logicalOperator, $dataTwo[0], $this->getOperatorSQL($operator), str_replace('\'', '', trim($dataTwo[1])), $operator);
+        $filter->setOdataOperator($operator);
+        $filter->setOdataType(ODataFilter::ODATA_TYPE_FUNCTION);
 
-        return [
-            'key' => $data[0],
-            'operator' => $this->getOperatorSQL($data[1]),
-            'value' => $data[2]
-        ];
+        return $filter;
     }
 
-    public function parseListOperator(string $filter): array
+    protected function createListFilter(string $filter, string $logicalOperator): ODataFilter
     {
-        // Separate filter by space
         $data = explode(' ', $filter, 3);
 
-        $values = explode(', ', str_replace(['(', ')'], ['', ''], $data[2]));
+        $values = explode(',', str_replace(['(', ')'], ['', ''], $data[2]));
 
-        return [
-            'key' => $data[0],
-            'operator' => $this->getOperatorSQL($data[1]),
-            'value' => collect($values)->map(function ($value) {
-                return str_replace("'", '', $value);
-            })->toArray()
-        ];
+        $filter = new ODataFilter($logicalOperator, $data[0], $this->getOperatorSQL($data[1]), array_map(fn($value) => trim($value), $values));
+        $filter->setOdataOperator($data[1]);
+        $filter->setOdataType(ODataFilter::ODATA_TYPE_LIST);
+
+        return $filter;
     }
 
-    public function parseFunctionOperator(string $filter): array
+    protected function createCompareFilter(string $filter, string $logicalOperator): ODataFilter
     {
-        // Separate filter by (
-        $data = explode('(', $filter);
-        // Get the key
-        $operator = $data[0];
-        // Separate remaining data by )
-        $dataTwo = explode(', \'', $data[1]);
+        $data = explode(' ', $filter);
+        $operator = $data[1];
 
-        return [
-            'key' => $dataTwo[0],
-            'operator' => $this->getOperatorSQL($operator),
-            'value' => $this->getValueSQL($operator, substr($dataTwo[1], 0, -2))
-        ];
-    }
+        $value = str_replace($data[0] .' ' . $operator . ' ', '', $filter);
 
-    public function getValueSQL(string $operator, $value)
-    {
-        switch ($operator) {
-            case 'contains':
-                return '%' . $value . '%';
-            case 'startswith':
-                return $value . '%';
-            case 'endswith':
-                return '%' . $value;
-            case 'substringof':
-                return '%' . $value . '%';
-            default:
-                return $value;
+        if (strpos($value, "'") === 0) {
+            $value = substr($value, 1, -1);
         }
+
+        $filter = new ODataFilter($logicalOperator, $data[0], $this->getOperatorSQL($operator), $value);
+        $filter->setOdataOperator($operator);
+        $filter->setOdataType(ODataFilter::ODATA_TYPE_COMPARE);
+
+        return $filter;
     }
 
-    public function getOperatorSQL(string $operator): string
+    protected function isLogicalOperator(string $token): bool
     {
-        switch ($operator) {
-            case 'eq':
-                return '=';
-            case 'ne':
-                return '!=';
-            case 'gt':
-                return '>';
-            case 'ge':
-                return '>=';
-            case 'lt':
-                return '<';
-            case 'le':
-                return '<=';
-            case 'contains':
-                return 'LIKE';
-            case 'startswith':
-                return 'LIKE';
-            case 'endswith':
-                return 'LIKE';
-            case 'substringof':
-                return 'LIKE';
-            case 'in':
-                return 'IN';
-            case 'notin':
-                return 'NOT IN';
-            default:
-                return '=';
-        }
+        return in_array($token, ['and', 'or']);
+    }
+
+    public function getOperatorSQL(string|null $operator): string
+    {
+        $mapping = [
+            'eq' => '=', 'ne' => '!=', 'gt' => '>', 'ge' => '>=',
+            'lt' => '<', 'le' => '<=', 'contains' => 'LIKE',
+            'startswith' => 'LIKE', 'endswith' => 'LIKE', 'substringof' => 'LIKE',
+            'in' => 'IN', 'notin' => 'NOT IN'
+        ];
+
+        return $mapping[$operator] ?? '=';
     }
 
     public static function onlyFilters(string $pathFilters, bool $withDollar = true): array
