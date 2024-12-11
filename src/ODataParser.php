@@ -15,9 +15,6 @@ class ODataParser
     public function parseFilters(string $pathUrl, bool $withDollar = true): array
     {
         $filterKey = $withDollar ? '$filter' : 'filter';
-        if (strpos($pathUrl, $filterKey) !== 0 || $pathUrl == '') {
-            return [];
-        }
         $filterString = str_replace($filterKey . '=', '', $pathUrl);
         $tokens = $this->tokenize($filterString);
         return $this->parseTokens($tokens);
@@ -43,7 +40,7 @@ class ODataParser
         $beforeFilter = null;
         $beforeLogicalOperator = null;
         $lastGroup = null;
-        
+
         foreach ($tokens as $token) {
             $newFilter = $this->parseToken($token, $beforeFilter, $beforeLogicalOperator, $lastGroup);
             if($newFilter != null){
@@ -109,7 +106,12 @@ class ODataParser
         $operator = $data[0];
         $dataTwo = explode(',', trim($data[1], ')'));
 
-        $filter = new ODataFilter($logicalOperator, $dataTwo[0], $this->getOperatorSQL($operator), str_replace('\'', '', trim($dataTwo[1])), $operator);
+        $filter = new ODataFilter(
+            $logicalOperator,
+            $dataTwo[0],
+            $this->getOperatorSQL($operator),
+            $this->getValueSQL($operator, str_replace('\'', '', trim($dataTwo[1])))
+        );
         $filter->setOdataOperator($operator);
         $filter->setOdataType(ODataFilter::ODATA_TYPE_FUNCTION);
 
@@ -140,7 +142,7 @@ class ODataParser
             $value = substr($value, 1, -1);
         }
 
-        $filter = new ODataFilter($logicalOperator, $data[0], $this->getOperatorSQL($operator), $value);
+        $filter = new ODataFilter($logicalOperator, $data[0], $this->getOperatorSQL($operator), $this->getValueSQL($operator, $value));
         $filter->setOdataOperator($operator);
         $filter->setOdataType(ODataFilter::ODATA_TYPE_COMPARE);
 
@@ -150,6 +152,22 @@ class ODataParser
     protected function isLogicalOperator(string $token): bool
     {
         return in_array($token, ['and', 'or']);
+    }
+
+    public function getValueSQL(string $operator, $value)
+    {
+        switch ($operator) {
+            case 'contains':
+                return '%' . $value . '%';
+            case 'startswith':
+                return $value . '%';
+            case 'endswith':
+                return '%' . $value;
+            case 'substringof':
+                return '%' . $value . '%';
+            default:
+                return $value;
+        }
     }
 
     public function getOperatorSQL(string|null $operator): string

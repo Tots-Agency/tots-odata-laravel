@@ -93,7 +93,7 @@ trait AllowedFilter
             return;
         }
 
-        $this->applyFilter($key, $query, $filter->getLogicalOperator(), $operator, $value);  
+        $this->applyFilter($key, $query, $filter->getLogicalOperator(), $operator, $value);
     }
 
     public function applyFilter(string $key, EloquentBuilder $query, $logicalOperator, $operator, $value)
@@ -106,7 +106,7 @@ trait AllowedFilter
                 $query->orWhereNotIn($key, $value);
                 return;
             }
-    
+
             $query->orWhere($key, $operator, $value);
             return;
         }
