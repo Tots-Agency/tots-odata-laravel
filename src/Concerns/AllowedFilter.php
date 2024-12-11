@@ -6,6 +6,9 @@ use Closure;
 use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Http\Request;
+use Tots\Odata\Filters\ODataFilter;
+use Tots\Odata\Filters\ODataGroup;
+use Tots\Odata\Filters\ODataType;
 use Tots\Odata\ODataParser;
 
 trait AllowedFilter
@@ -45,29 +48,77 @@ trait AllowedFilter
         $filters = ODataParser::onlyFilters($filters);
 
         collect($filters)->each(function ($filter) use ($query) {
-            $key = $filter['key'];
-            $operator = $filter['operator'];
-            $value = $filter['value'];
+            $this->applyOdataFilter($filter, $query);
+        });
+    }
 
-            if (!$this->allowedFilters->contains($key)) {
-                return;
+    public function applyOdataFilter(ODataType $filter, EloquentBuilder $query)
+    {
+        if($filter instanceof ODataFilter){
+            $this->applyOdataOneFilter($filter, $query);
+            return;
+        }
+
+        if($filter instanceof ODataGroup){
+            if($filter->getLogicalOperator() == 'or'){
+                $query->orWhere(function($subquery) use ($filter) {
+                    collect($filter->getFilters())->each(function ($filter) use ($subquery) {
+                        $this->applyOdataFilter($filter, $subquery);
+                    });
+                });
+            } else {
+                $query->where(function($subquery) use ($filter) {
+                    collect($filter->getFilters())->each(function ($filter) use ($subquery) {
+                        $this->applyOdataFilter($filter, $subquery);
+                    });
+                });
             }
+        }
+    }
 
-            if($this->customFilters != null && $this->customFilters->has($key) && (is_array($value) && count($value) > 0)) {
-                $callback = $this->customFilters->get($key);
-                $callback($query, $operator, $value);
-                return;
-            }
+    public function applyOdataOneFilter(ODataFilter $filter, EloquentBuilder $query)
+    {
+        $key = $filter->getKey();
 
+        if (!$this->allowedFilters->contains($key)) {
+            return;
+        }
+
+        $value = $filter->getValue();
+        $operator = $filter->getOperator();
+
+        if($this->customFilters != null && $this->customFilters->has($key) && (is_array($value) && count($value) > 0)) {
+            $callback = $this->customFilters->get($key);
+            $callback($query, $operator, $value);
+            return;
+        }
+
+        $this->applyFilter($key, $query, $filter->getLogicalOperator(), $operator, $value);  
+    }
+
+    public function applyFilter(string $key, EloquentBuilder $query, $logicalOperator, $operator, $value)
+    {
+        if($logicalOperator == 'or'){
             if($operator == 'IN'){
-                $query->whereIn($key, $value);
+                $query->orWhereIn($key, $value);
                 return;
             }else if ($operator == 'NOTIN'){
-                $query->whereNotIn($key, $value);
+                $query->orWhereNotIn($key, $value);
                 return;
             }
+    
+            $query->orWhere($key, $operator, $value);
+            return;
+        }
 
-            $query->where($key, $operator, $value);
-        });
+        if($operator == 'IN'){
+            $query->whereIn($key, $value);
+            return;
+        }else if ($operator == 'NOTIN'){
+            $query->whereNotIn($key, $value);
+            return;
+        }
+
+        $query->where($key, $operator, $value);
     }
 }
