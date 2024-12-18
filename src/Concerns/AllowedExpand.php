@@ -91,6 +91,10 @@ trait AllowedExpand
 
     public function isExpandPerformance($relationKey): bool
     {
+        if($this->expandPerformances == null) {
+            return false;
+        }
+
         return $this->expandPerformances->has($relationKey);
     }
 
