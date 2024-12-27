@@ -87,7 +87,11 @@ trait AllowedFilter
         $value = $filter->getValue();
         $operator = $filter->getOperator();
 
-        if($this->customFilters != null && $this->customFilters->has($key) && (is_array($value) && count($value) > 0)) {
+        if(
+            $this->customFilters != null &&
+            $this->customFilters->has($key) &&
+            ((is_array($value) && count($value) > 0) || !is_array($value))
+        ) {
             $callback = $this->customFilters->get($key);
             $callback($query, $operator, $value);
             return;
