@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Traits\ForwardsCalls;
 use Tots\Odata\Concerns\AllowedExpand;
 use Tots\Odata\Concerns\AllowedFilter;
@@ -62,6 +63,10 @@ class ODataBuilder
 
     public function getTop(): int
     {
+        if ($this->request->query('$top') == 0) {
+            // This is the special case for the top=0 where we need to return the all the records.
+            return DB::table($this->table)->count();
+        }
         return $this->request->query('$top', 10);
     }
 
