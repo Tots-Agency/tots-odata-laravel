@@ -54,11 +54,11 @@ class ODataParser
     protected function parseToken(string $token, &$beforeFilter, &$beforeLogicalOperator, &$lastGroup): ?ODataType
     {
         if($beforeFilter == null && $this->isLogicalOperator($token)) {
-            throw new \Exception('Invalid filter format');
+            //throw new \Exception('Invalid filter format');
         } else if ($this->isLogicalOperator($token)) {
             $beforeLogicalOperator = $token;
         } else if ($token == '(') {
-            $lastGroup = new ODataGroup($beforeLogicalOperator);
+            $lastGroup = new ODataGroup($beforeLogicalOperator ?? 'and');
             $beforeLogicalOperator = null;
             return $lastGroup;
         } else if ($token == ')') {
