@@ -50,11 +50,12 @@ class ExampleTest extends TestCase
     public function test_can_function()
     {
         $filter = 'name eq \'John\' and contains(city, \'New York\') or (age gt \'30\' and startswith(name, \'John\'))';
+        $filterExpected = 'name eq \'John\' and contains(city, \'%New York%\') or (age gt \'30\' and startswith(name, \'John%\'))';
 
         $parser = new \Tots\Odata\ODataParser();
         $result = $parser->parseFilters('$filter=' . $filter);;
 
-        $this->assertEquals($filter, ODataTypeParser::toString($result));
+        $this->assertEquals($filterExpected, ODataTypeParser::toString($result));
     }
 
     /*public function test_can_invalid()

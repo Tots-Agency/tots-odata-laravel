@@ -22,16 +22,18 @@ class ODataParser
 
     protected function tokenize(string $expression): array
     {
-        $pattern = '/(contains|startswith|endswith|substringof)\((.*?)\)/';
-        $replacement = '$1$$$2$$';
-        $modifiedExpression = preg_replace($pattern, $replacement, $expression);
+        // Examples
+        // game_status_id eq 'completed'
+        // game_status_id eq 'completed' and team_name eq 'Team 1'
+        // event_name eq 'Tots Event (Demo)' and (team_name eq 'team 1' or team_name eq 'Team 2')
+        // event_name eq 'Tots Event (Demo)' and (team_name eq 'team 1' or team_name eq 'Team 2') and (game_status_id eq 'cancelled' or game_status_id eq 'completed')
+        $pattern = "/\\(|\\)|\\s+and\\s+|\\s+or\\s+|('[^']*')|([a-zA-Z_]+\\s+(eq|ne|gt|lt|ge|le)\\s+'[^']*')|(contains|startswith|endswith|substringof)\\([a-zA-Z_]+,\\s*'[^']*'\\)/";
 
-        $pattern = '/(\(|\)| and | or )/';
-        $tokens = preg_split($pattern, $modifiedExpression, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
-        $tokens = array_map(function($token) {
-            return str_replace(['contains$$', 'startswith$$', 'endswith$$', 'substringof$$', '$$'], ["contains(", 'startswith(', 'endswith(', 'substringof(', ')'], $token);
-        }, $tokens);
-        return array_map('trim', $tokens);
+        // Extraer los tokens sin dividir los valores entre comillas
+        preg_match_all($pattern, $expression, $matches);
+
+        // Limpiar espacios extra y devolver el array de tokens
+        return array_map('trim', $matches[0]);
     }
 
     protected function parseTokens(array $tokens): array
@@ -133,7 +135,7 @@ class ODataParser
 
     protected function createCompareFilter(string $filter, string $logicalOperator): ODataFilter
     {
-        $data = explode(' ', $filter);
+        $data = $this->splitIgnoringQuotes($filter);
         $operator = $data[1];
 
         $value = str_replace($data[0] .' ' . $operator . ' ', '', $filter);
@@ -180,6 +182,12 @@ class ODataParser
         ];
 
         return $mapping[$operator] ?? '=';
+    }
+
+    protected function splitIgnoringQuotes($input) {
+        $pattern = "/'[^']*'|\S+/";  // Captura texto entre comillas o palabras separadas por espacios
+        preg_match_all($pattern, $input, $matches);
+        return $matches[0];
     }
 
     public static function onlyFilters(string $pathFilters, bool $withDollar = true): array
