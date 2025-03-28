@@ -58,6 +58,16 @@ class ExampleTest extends TestCase
         $this->assertEquals($filterExpected, ODataTypeParser::toString($result));
     }
 
+    public function test_can_in()
+    {
+        $filter = 'event_year in (2024,2025)';
+
+        $parser = new \Tots\Odata\ODataParser();
+        $result = $parser->parseFilters('$filter=' . $filter);;
+
+        $this->assertEquals($filter, ODataTypeParser::toString($result));
+    }
+
     /*public function test_can_invalid()
     {
         $parser = new \Tots\Odata\ODataParser();
