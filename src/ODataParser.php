@@ -27,7 +27,7 @@ class ODataParser
         // game_status_id eq 'completed' and team_name eq 'Team 1'
         // event_name eq 'Tots Event (Demo)' and (team_name eq 'team 1' or team_name eq 'Team 2')
         // event_name eq 'Tots Event (Demo)' and (team_name eq 'team 1' or team_name eq 'Team 2') and (game_status_id eq 'cancelled' or game_status_id eq 'completed')
-        $pattern = "/\\(|\\)|\\s+and\\s+|\\s+or\\s+|('[^']*')|([a-zA-Z_]+\\s+(eq|ne|gt|lt|ge|le)\\s+'[^']*')|(contains|startswith|endswith|substringof)\\([a-zA-Z_]+,\\s*'[^']*'\\)|([a-zA-Z_]+\\s+in\\s*\\([0-9,\\s]+\\))/";
+        $pattern = "/\\(|\\)|\\s+and\\s+|\\s+or\\s+|('[^']*')|([a-zA-Z_]+\\s+(eq|ne|gt|lt|ge|le)\\s+'[^']*')|(contains|startswith|endswith|substringof)\\([a-zA-Z0-9_\\.]+,\\s*'[^']*'\\)|([a-zA-Z_]+\\s+in\\s*\\([0-9,\\s]+\\))/";
 
         // Extraer los tokens sin dividir los valores entre comillas
         preg_match_all($pattern, $expression, $matches);

@@ -63,7 +63,7 @@ class ExampleTest extends TestCase
         $filter = 'event_year in (2024,2025)';
 
         $parser = new \Tots\Odata\ODataParser();
-        $result = $parser->parseFilters('$filter=' . $filter);;
+        $result = $parser->parseFilters('$filter=' . $filter);
 
         $this->assertEquals($filter, ODataTypeParser::toString($result));
     }
@@ -75,4 +75,15 @@ class ExampleTest extends TestCase
 
         $this->assertEmpty($result, 'The parser should return an empty array for invalid expressions.');
     }*/
+
+    public function test_can_substringof()
+    {
+        $filter = "substringof(users.id, 'mati') or substringof(email, 'mati') or substringof(user_profiles.first_name, 'mati') or substringof(user_profiles.last_name, 'mati')";
+        $filterExpected = "substringof(users.id, '%mati%') or substringof(email, '%mati%') or substringof(user_profiles.first_name, '%mati%') or substringof(user_profiles.last_name, '%mati%')";
+
+        $parser = new \Tots\Odata\ODataParser();
+        $result = $parser->parseFilters('$filter=' . $filter);
+
+        $this->assertEquals($filterExpected, ODataTypeParser::toString($result));
+    }
 }
