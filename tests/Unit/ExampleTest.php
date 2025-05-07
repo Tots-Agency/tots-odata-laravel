@@ -7,6 +7,8 @@ use Tots\Odata\Parsers\ODataTypeParser;
 
 class ExampleTest extends TestCase
 {
+    // Execute tests: ./vendor/bin/phpunit --stop-on-failure
+
     public function test_can_simple()
     {
         $filter = 'name eq \'John\'';
@@ -60,12 +62,13 @@ class ExampleTest extends TestCase
 
     public function test_can_in()
     {
-        $filter = 'event_year in (2024,2025)';
+        $filter = "event_year in (2024,2025) and event_year in ('2026', '2027')";
+        $filterExpected = 'event_year in (2024,2025) and event_year in (2026,2027)';
 
         $parser = new \Tots\Odata\ODataParser();
         $result = $parser->parseFilters('$filter=' . $filter);
 
-        $this->assertEquals($filter, ODataTypeParser::toString($result));
+        $this->assertEquals($filterExpected, ODataTypeParser::toString($result));
     }
 
     /*public function test_can_invalid()

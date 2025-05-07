@@ -27,7 +27,7 @@ class ODataParser
         // game_status_id eq 'completed' and team_name eq 'Team 1'
         // event_name eq 'Tots Event (Demo)' and (team_name eq 'team 1' or team_name eq 'Team 2')
         // event_name eq 'Tots Event (Demo)' and (team_name eq 'team 1' or team_name eq 'Team 2') and (game_status_id eq 'cancelled' or game_status_id eq 'completed')
-        $pattern = "/\\(|\\)|\\s+and\\s+|\\s+or\\s+|('[^']*')|([a-zA-Z_]+\\s+(eq|ne|gt|lt|ge|le)\\s+'[^']*')|(contains|startswith|endswith|substringof)\\([a-zA-Z0-9_\\.]+,\\s*'[^']*'\\)|([a-zA-Z_]+\\s+in\\s*\\([0-9,\\s]+\\))/";
+        $pattern = "/\\(|\\)|\\s+and\\s+|\\s+or\\s+|('[^']*')|([a-zA-Z_]+\\s+(eq|ne|gt|lt|ge|le)\\s+'[^']*')|(contains|startswith|endswith|substringof)\\([a-zA-Z0-9_\\.]+,\\s*'[^']*'\\)|([a-zA-Z_]+\\s+in\\s*\\(\\s*(?:'[^']*'|[0-9]+)\\s*(?:,\\s*(?:'[^']*'|[0-9]+)\\s*)*\\s*\\))/";
 
         // Extraer los tokens sin dividir los valores entre comillas
         preg_match_all($pattern, $expression, $matches);
@@ -125,8 +125,8 @@ class ODataParser
         $data = explode(' ', $filter, 3);
 
         $values = explode(',', str_replace(['(', ')'], ['', ''], $data[2]));
-
-        $filter = new ODataFilter($logicalOperator, $data[0], $this->getOperatorSQL($data[1]), array_map(fn($value) => trim($value), $values));
+        
+        $filter = new ODataFilter($logicalOperator, $data[0], $this->getOperatorSQL($data[1]), array_map(fn($value) => str_replace("'", '', trim($value)), $values));
         $filter->setOdataOperator($data[1]);
         $filter->setOdataType(ODataFilter::ODATA_TYPE_LIST);
 
