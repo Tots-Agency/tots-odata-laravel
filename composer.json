@@ -1,7 +1,7 @@
 {
     "name": "tots/odata-laravel",
     "description": "The library for Laravel PHP",
-    "version": "0.0.12",
+    "version": "11.0.2",
     "type": "library",
     "license": "MIT",
     "autoload": {
